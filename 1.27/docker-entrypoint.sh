@@ -1,16 +1,23 @@
 #!/bin/bash
 
-set -e
-
 : ${WIKI_SITE_NAME:=MediaWiki}
 : ${WIKI_SERVER_NAME:=localhost}
 : ${WIKI_DB_NAME:=wiki}
 : ${WIKI_DB_USER:=root}
+: ${WIKI_DB_ALIAS:=wikidb}
 
-if [ -z "$MYSQL_PORT_3306_TCP" ]; then
+ping -qc 3 ${WIKI_DB_ALIAS} &> /dev/null
+if [[ $? -ne 0 -a -z "$MYSQL_PORT_3306_TCP" ]]; then
 	echo >&2 'error: missing MYSQL_PORT_3306_TCP environment variable.'
 	echo >&2 'Did you forget to --link some_mysql_container:mysql ?'
+  echo >&2 'Or did you forget to add alias "'${WIKI_DB_ALIAS}'" ?'
 	exit 1
+fi
+
+# set DB address
+WIKI_DB_ADDR=${WIKI_DB_ALIAS}
+if [[ -n "$MYSQL_PORT_3306_TCP" ]]; then
+  WIKI_DB_ADDR=${MYSQL_PORT_3306_TCP_ADDR}
 fi
 
 if [[ -z "$WIKI_DB_PW" ]]; then
@@ -20,15 +27,14 @@ fi
 # installation mode
 if [[ ! -f ./wiki/.installed ]]; then
   cd wiki
-  if [[ ! -n "${WIKI_SKIP_DB+1}" ]]; then
+  if [[ -z "$WIKI_SKIP_DB" ]]; then
       #create new LocalSettings.php
       rm LocalSettings.php
 
       #create database
-      TERM=dumb php -- "$MYSQL_PORT_3306_TCP" "$WIKI_DB_USER" "$WIKI_DB_PW" "$WIKI_DB_NAME" <<'EOPHP'
+      TERM=dumb php -- "$WIKI_DB_ADDR" "$WIKI_DB_USER" "$WIKI_DB_PW" "$WIKI_DB_NAME" <<'EOPHP'
         <?php
-          list($protocol, $host, $port) = explode(':', str_replace('/', '', $argv[1]));
-          $mysql = new mysqli(str_replace('/', '', $host), $argv[2], $argv[3], '', (int)$port);
+          $mysql = new mysqli($argv[1], $argv[2], $argv[3], '', 3306);
           if ($mysql->connect_error) {
             file_put_contents('php://stderr', 'MySQL Connection Error: (' . $mysql->connect_errno . ') ' . $mysql->connect_error . "\n");
             exit(1);
@@ -58,7 +64,7 @@ EOPHP
         --pass password \
         --scriptpath /wiki \
         --dbname ${WIKI_DB_NAME} \
-        --dbserver ${MYSQL_PORT_3306_TCP_ADDR} \
+        --dbserver ${WIKI_DB_ADDR} \
         --dbuser ${WIKI_DB_USER} \
         --dbpass ${WIKI_DB_PW} \
         ${WIKI_SITE_NAME} admin 2> /dev/null
@@ -66,13 +72,13 @@ EOPHP
       echo 'DB installation was skipped!'
 
       sed -i -e 's/{{WIKI_NAME}}/'${WIKI_SITE_NAME}'/' LocalSettings.php
-      sed -i -e 's/{{MYSQL_SERVER}}/'${MYSQL_PORT_3306_TCP_ADDR}'/' LocalSettings.php
+      sed -i -e 's/{{MYSQL_SERVER}}/'${WIKI_DB_ADDR}'/' LocalSettings.php
       sed -i -e 's/{{WIKI_DB_NAME}}/'${WIKI_DB_NAME}'/' LocalSettings.php
       sed -i -e 's/{{WIKI_DB_USER}}/'${WIKI_DB_USER}'/' LocalSettings.php
       sed -i -e 's/{{WIKI_DB_PW}}/'${WIKI_DB_PW}'/' LocalSettings.php
   fi
 
-  if [ -n "${WIKI_EXTRA_EXPOSED_PORT+1}" ]; then
+  if [[ -n "$WIKI_EXTRA_EXPOSED_PORT" ]]; then
     WIKI_SERVER_NAME="${WIKI_SERVER_NAME}:${WIKI_EXTRA_EXPOSED_PORT}"
   fi
   sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'${WIKI_SERVER_NAME}'";/' LocalSettings.php
