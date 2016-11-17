@@ -7,7 +7,7 @@
 : ${WIKI_DB_ALIAS:=wikidb}
 
 ping -qc 3 ${WIKI_DB_ALIAS} &> /dev/null
-if [[ $? -ne 0 -a -z "$MYSQL_PORT_3306_TCP" ]]; then
+if [[ $? -ne 0 && -z "$MYSQL_PORT_3306_TCP" ]]; then
 	echo >&2 'error: missing MYSQL_PORT_3306_TCP environment variable.'
 	echo >&2 'Did you forget to --link some_mysql_container:mysql ?'
   echo >&2 'Or did you forget to add alias "'${WIKI_DB_ALIAS}'" ?'
