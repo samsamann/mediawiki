@@ -44,16 +44,6 @@ if [[ ! -f ./wiki/.installed ]]; then
             $mysql->close();
             exit(1);
           }
-          if ($argv[2] != 'root') {
-            if (!$mysql->query("
-              CREATE USER IF NOT EXISTS ". $mysql->real_escape_string($argv[2]) ." IDENTIFIED BY PASSWORD;
-              GRANT ALL PRIVILEGES ON ". $mysql->real_escape_string($argv[2]) .".* TO '". $mysql->real_escape_string($argv[4]) ."'@'%' IDENTIFIED BY 'password';
-            ")) {
-              file_put_contents('php://stderr', 'MySQL "CREATE DATABASE" Error: ' . $mysql->error . "\n");
-              $mysql->close();
-              exit(1);
-            }
-          }
 
           $mysql->close();
         ?>
