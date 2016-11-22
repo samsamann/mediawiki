@@ -64,20 +64,20 @@ EOPHP
     else
       echo 'DB installation was skipped!'
 
-      sed -i -e 's/{{WIKI_NAME}}/'${WIKI_SITE_NAME}'/' LocalSettings.php
-      sed -i -e 's/{{MYSQL_SERVER}}/'${WIKI_DB_ADDR}'/' LocalSettings.php
-      sed -i -e 's/{{WIKI_DB_NAME}}/'${WIKI_DB_NAME}'/' LocalSettings.php
-      sed -i -e 's/{{WIKI_DB_USER}}/'${WIKI_DB_USER}'/' LocalSettings.php
-      sed -i -e 's/{{WIKI_DB_PW}}/'${WIKI_DB_PW}'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_NAME}}/'"${WIKI_SITE_NAME}"'/' LocalSettings.php
+      sed -i -e 's/{{MYSQL_SERVER}}/'"${WIKI_DB_ADDR}"'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_DB_NAME}}/'"${WIKI_DB_NAME}"'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_DB_USER}}/'"${WIKI_DB_USER}"'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_DB_PW}}/'"${WIKI_DB_PW}"'/' LocalSettings.php
   fi
 
   if [[ -n "$WIKI_EXTRA_EXPOSED_PORT" ]]; then
     WIKI_SERVER_NAME="${WIKI_SERVER_NAME}:${WIKI_EXTRA_EXPOSED_PORT}"
   fi
-  sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'${WIKI_SERVER_NAME}'";/' LocalSettings.php
+  sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'"${WIKI_SERVER_NAME}"'";/' LocalSettings.php
 
-  echo "\$wgArticlePath = '/wiki/\$1';" >> LocalSettings.php
-  echo "\$wgUsePathInfo = true;" >> LocalSettings.php
+  echo '$wgArticlePath = "/wiki/$1";' >> LocalSettings.php
+  echo '$wgUsePathInfo = true;' >> LocalSettings.php
 
   chown -R www-data:www-data .
   chmod -R 744 images
