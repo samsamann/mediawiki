@@ -1,7 +1,7 @@
 #!/bin/bash
 
 : ${WIKI_SITE_NAME:=MediaWiki}
-: ${WIKI_SERVER_NAME:=localhost}
+: ${WIKI_DNS_NAME:=localhost}
 : ${WIKI_DB_NAME:=wiki}
 : ${WIKI_DB_USER:=root}
 : ${WIKI_DB_ALIAS:=wikidb}
@@ -72,9 +72,9 @@ EOPHP
   fi
 
   if [[ -n "$WIKI_EXTRA_EXPOSED_PORT" ]]; then
-    WIKI_SERVER_NAME="${WIKI_SERVER_NAME}:${WIKI_EXTRA_EXPOSED_PORT}"
+    WIKI_DNS_NAME="${WIKI_DNS_NAME}:${WIKI_EXTRA_EXPOSED_PORT}"
   fi
-  sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'"${WIKI_SERVER_NAME}"'";/' LocalSettings.php
+  sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'"${WIKI_DNS_NAME}"'";/' LocalSettings.php
 
   echo '$wgArticlePath = "/wiki/$1";' >> LocalSettings.php
   echo '$wgUsePathInfo = true;' >> LocalSettings.php
