@@ -14,12 +14,14 @@ RUN set -x; \
         libfreetype6-dev \
         libjpeg62-turbo-dev \
         libpng12-dev \
+        libldap2-dev \
     && rm -r /var/lib/apt/lists/*
 RUN set -x; \
     a2enmod rewrite
 RUN set -x; \
-    docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
-    && docker-php-ext-install -j$(nproc) mbstring intl mysqli gd \
+    ln -s /usr/lib/x86_64-linux-gnu/libl*.so /usr/lib \
+    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install -j$(nproc) mbstring intl mysqli gd ldap \
     && docker-php-ext-enable opcache
 RUN set -x; \
     curl -fO $MEDIAWIKI_DOWNLOAD_URL \
