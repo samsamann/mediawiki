@@ -1,7 +1,7 @@
 #!/bin/bash
 
 : ${WIKI_SITE_NAME:=MediaWiki}
-: ${WIKI_SERVER_NAME:=localhost}
+: ${WIKI_DNS_NAME:=localhost}
 : ${WIKI_DB_NAME:=wiki}
 : ${WIKI_DB_USER:=root}
 : ${WIKI_DB_ALIAS:=wikidb}
@@ -20,8 +20,11 @@ if [[ -n "$MYSQL_PORT_3306_TCP" ]]; then
   WIKI_DB_ADDR=${MYSQL_PORT_3306_TCP_ADDR}
 fi
 
-if [[ -z "$WIKI_DB_PW" ]]; then
+if [[ -z "$WIKI_DB_PW" && -n "$MYSQL_ENV_MYSQL_ROOT_PASSWORD" ]]; then
   WIKI_DB_PW=${MYSQL_ENV_MYSQL_ROOT_PASSWORD}
+elif [[ -z "$WIKI_DB_PW" ]]; then
+  echo >&2 'error: missing WIKI_DB_PW environment variable.'
+  exit 1
 fi
 
 # installation mode
@@ -44,16 +47,6 @@ if [[ ! -f ./wiki/.installed ]]; then
             $mysql->close();
             exit(1);
           }
-          if ($argv[2] != 'root') {
-            if (!$mysql->query("
-              CREATE USER IF NOT EXISTS ". $mysql->real_escape_string($argv[2]) ." IDENTIFIED BY PASSWORD;
-              GRANT ALL PRIVILEGES ON ". $mysql->real_escape_string($argv[2]) .".* TO '". $mysql->real_escape_string($argv[4]) ."'@'%' IDENTIFIED BY 'password';
-            ")) {
-              file_put_contents('php://stderr', 'MySQL "CREATE DATABASE" Error: ' . $mysql->error . "\n");
-              $mysql->close();
-              exit(1);
-            }
-          }
 
           $mysql->close();
         ?>
@@ -71,20 +64,20 @@ EOPHP
     else
       echo 'DB installation was skipped!'
 
-      sed -i -e 's/{{WIKI_NAME}}/'${WIKI_SITE_NAME}'/' LocalSettings.php
-      sed -i -e 's/{{MYSQL_SERVER}}/'${WIKI_DB_ADDR}'/' LocalSettings.php
-      sed -i -e 's/{{WIKI_DB_NAME}}/'${WIKI_DB_NAME}'/' LocalSettings.php
-      sed -i -e 's/{{WIKI_DB_USER}}/'${WIKI_DB_USER}'/' LocalSettings.php
-      sed -i -e 's/{{WIKI_DB_PW}}/'${WIKI_DB_PW}'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_NAME}}/'"${WIKI_SITE_NAME}"'/' LocalSettings.php
+      sed -i -e 's/{{MYSQL_SERVER}}/'"${WIKI_DB_ADDR}"'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_DB_NAME}}/'"${WIKI_DB_NAME}"'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_DB_USER}}/'"${WIKI_DB_USER}"'/' LocalSettings.php
+      sed -i -e 's/{{WIKI_DB_PW}}/'"${WIKI_DB_PW}"'/' LocalSettings.php
   fi
 
   if [[ -n "$WIKI_EXTRA_EXPOSED_PORT" ]]; then
-    WIKI_SERVER_NAME="${WIKI_SERVER_NAME}:${WIKI_EXTRA_EXPOSED_PORT}"
+    WIKI_DNS_NAME="${WIKI_DNS_NAME}:${WIKI_EXTRA_EXPOSED_PORT}"
   fi
-  sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'${WIKI_SERVER_NAME}'";/' LocalSettings.php
+  sed -i -e 's/\$wgServer = .*/\$wgServer = "http:\/\/'"${WIKI_DNS_NAME}"'";/' LocalSettings.php
 
-  echo "\$wgArticlePath = '/wiki/\$1';" >> LocalSettings.php
-  echo "\$wgUsePathInfo = true;" >> LocalSettings.php
+  echo '$wgArticlePath = "/wiki/$1";' >> LocalSettings.php
+  echo '$wgUsePathInfo = true;' >> LocalSettings.php
 
   chown -R www-data:www-data .
   chmod -R 744 images
