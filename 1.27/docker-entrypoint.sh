@@ -20,8 +20,11 @@ if [[ -n "$MYSQL_PORT_3306_TCP" ]]; then
   WIKI_DB_ADDR=${MYSQL_PORT_3306_TCP_ADDR}
 fi
 
-if [[ -z "$WIKI_DB_PW" ]]; then
+if [[ -z "$WIKI_DB_PW" && -n "$MYSQL_ENV_MYSQL_ROOT_PASSWORD" ]]; then
   WIKI_DB_PW=${MYSQL_ENV_MYSQL_ROOT_PASSWORD}
+elif [[ -z "$WIKI_DB_PW" ]]; then
+  echo >&2 'error: missing WIKI_DB_PW environment variable.'
+  exit 1
 fi
 
 # installation mode
